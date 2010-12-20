@@ -14,10 +14,10 @@ from .docnodes import CommentNode, RootNode, NodeList, ParaSepNode, \
      DescLineCommandNode, InlineNode, IndexNode, SectioningNode, \
      EnvironmentNode, DescEnvironmentNode, TableNode, VerbatimNode, \
      ListNode, ItemizeNode, EnumerateNode, DescriptionNode, \
-     DefinitionsNode, ProductionListNode
+     DefinitionsNode, ProductionListNode, AmpersandNode
 
 from .util import umlaut, empty
-
+import sys
 
 class ParserError(Exception):
     def __init__(self, msg, lineno):
@@ -107,6 +107,8 @@ class DocParser(object):
         mathmode = False
         math = ''
         for l, t, v, r in self.tokens:
+            sys.stderr.write("[%s][%s][%s][%s]\n" % ( l,t,v,r ))  ## line, type[command/text/egroup/...] ,  
+
             if condition and condition(t, v, bracelevel):
                 return nodelist.flatten()
             if mathmode:
@@ -134,6 +136,8 @@ class DocParser(object):
                 nodelist.append(CommentNode(v))
             elif t == 'tilde':
                 nodelist.append(NbspNode())
+            elif t == 'ampersand':
+                nodelist.append(AmpersandNode())
             elif t == 'mathmode':
                 mathmode = True
             elif t == 'parasep':
@@ -271,6 +275,7 @@ class DocParser(object):
             'samp': 'M',
             'character': 'M',
             'texttt': 'M',
+            'code': 'M',
 
             # mapped to `default role`
             'var': 'M',
@@ -461,6 +466,10 @@ class DocParser(object):
         raise ParserError('no handler for \\%s command' % cmdname,
                           self.tokens.peek()[0])
 
+
+
+
+
     def handle_begin(self):
         envname, = self.parse_args('begin', 'T')
         handler = getattr(self, 'handle_%s_env' % envname.text, None)
@@ -564,6 +573,7 @@ class DocParser(object):
     handle_sloppypar_env = handle_document_env
     handle_flushleft_env = handle_document_env
     handle_math_env = handle_document_env
+    handle_table_env = handle_document_env
 
     def handle_verbatim_env(self):
         text = []
@@ -692,6 +702,63 @@ class DocParser(object):
     handle_longtableiv_env = handle_tableiv_env
     handle_tablev_env = mk_table_handler(None, 'v', 5)
     handle_longtablev_env = handle_tablev_env
+
+
+    def handle_tabular_env(self):
+        args = self.parse_args('tabular', 'T' )
+
+        colspec = args[0].text 
+        colspec = colspec.replace('|','')
+        numcols = len(colspec)
+        sys.stderr.write( "_tabylat %s colspec %s numcols %d \n" % (  repr(args), colspec, numcols ) )
+       
+        all = []
+        running = [False]
+
+        def endrow_condition(t, v, bracelevel):
+            #print "endrow t[%s] v[%s] b[%s] " % ( t, v, bracelevel )
+            if self.environment_end(t, v):
+                del running[:]
+                return True
+            if t == 'command' and v == "\\":
+                return True
+            return False
+
+        while running:
+            row = NodeList() 
+            row.append( self.parse_until(endrow_condition) )
+            row.append( AmpersandNode())
+
+            cols = []
+            elem = NodeList()            
+            for c in row:
+                if isinstance(c, AmpersandNode):
+                    cols.append(elem)
+                    elem = NodeList()
+                else:
+                    elem.append(c)
+
+            sys.stderr.write("row %s \n" % repr(row))
+            if len(cols) == numcols: 
+                all.append( cols )
+            else:
+                pass
+                print "tail skip ", ( repr(cols) , numcols, len(cols) )
+
+
+        if len(all) > 0:
+            headings = all[0]
+            lines = all[1:]
+            return TableNode(numcols, headings, lines)
+        else:
+            print "WARNING returning EMPTY"
+            return EmptyNode()        
+
+ 
+    def handle_figure_env(self):
+        return EmptyNode()
+    def handle_center_env(self):
+        return EmptyNode()
 
     def handle_productionlist_env(self):
         env_args = self.parse_args('productionlist', 'Q')

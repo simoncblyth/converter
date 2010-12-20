@@ -814,6 +814,7 @@ class RestWriter(object):
         else:
             self.curpar.append(fixup_text(node.text))
 
+    visit_AmpersandNode = visit_EmptyNode
     visit_NbspNode = visit_TextNode
     visit_SimpleCmdNode = visit_TextNode
 

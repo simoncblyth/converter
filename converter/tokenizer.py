@@ -23,6 +23,7 @@ class Tokenizer(Scanner):
         ']': 'eoptional',
         '~': 'tilde',
         '$': 'mathmode',
+        '&': 'ampersand',
     }
 
     @property
@@ -35,6 +36,7 @@ class Tokenizer(Scanner):
     def _tokenize(self):
         lineno = 1
         while not self.eos:
+            #print self
             if self.scan(r'\\verb([^a-zA-Z])(.*?)(\1)'):
                 # specialcase \verb here
                 yield lineno, 'command', 'verb', '\\verb'
@@ -51,7 +53,7 @@ class Tokenizer(Scanner):
             elif self.scan(r'%(.*)\n[ \t]*'):
                 yield lineno, 'comment', self.match.group(1), self.mtext
                 lineno += 1
-            elif self.scan(r'[{}\[\]~$]'):
+            elif self.scan(r'[{}\[\]~&$]'):
                 yield lineno, self.specials[self.mtext], self.mtext, self.mtext
             elif self.scan(r'(\n[ \t]*){2,}'):
                 lines = self.mtext.count('\n')
@@ -60,7 +62,7 @@ class Tokenizer(Scanner):
             elif self.scan(r'\n[ \t]*'):
                 yield lineno, 'text', ' ', self.mtext
                 lineno += 1
-            elif self.scan(r'[^\\%}{\[\]~\n\$]+'):
+            elif self.scan(r'[^\\%}{\[\]~\n\$&]+'):
                 yield lineno, 'text', self.mtext, self.mtext
             else:
                 raise RuntimeError('unexpected text on line %d: %r' %
@@ -122,3 +124,10 @@ class TokenStream(object):
     def push(self, item):
         """ Push a token back to the stream. """
         self._pushed.append(item)
+
+
+
+
+
+
+

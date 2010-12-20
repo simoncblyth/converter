@@ -30,6 +30,7 @@ def convert_file(infile, outfile, doraise=True, splitchap=False,
         outf = codecs.open(outfile, 'w', 'utf-8')
     else:
         outf = None
+    
     r = RestWriter(outf, splitchap, toctree, deflang, labelprefix)
     try:
         r.write_document(p.parse())

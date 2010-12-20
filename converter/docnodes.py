@@ -120,6 +120,12 @@ class EmptyNode(TextNode):
         self.text = ''
 
 
+class AmpersandNode(DocNode):
+    """ An ampersand node. """
+    def __repr__(self):
+        return 'Ampersand'
+
+
 class NbspNode(TextNode):
     """ A non-breaking space. """
     def __init__(self, *args):
