@@ -107,7 +107,7 @@ class DocParser(object):
         mathmode = False
         math = ''
         for l, t, v, r in self.tokens:
-            sys.stderr.write("[%s][%s][%s][%s]\n" % ( l,t,v,r ))  ## line, type[command/text/egroup/...] ,  
+            #sys.stderr.write("[%s][%s][%s][%s]\n" % ( l,t,v,r ))  ## line, type[command/text/egroup/...] ,  
 
             if condition and condition(t, v, bracelevel):
                 return nodelist.flatten()
@@ -710,7 +710,7 @@ class DocParser(object):
         colspec = args[0].text 
         colspec = colspec.replace('|','')
         numcols = len(colspec)
-        sys.stderr.write( "_tabylat %s colspec %s numcols %d \n" % (  repr(args), colspec, numcols ) )
+        #sys.stderr.write( "_tabylat %s colspec %s numcols %d \n" % (  repr(args), colspec, numcols ) )
        
         all = []
         running = [False]
@@ -738,7 +738,7 @@ class DocParser(object):
                 else:
                     elem.append(c)
 
-            sys.stderr.write("row %s \n" % repr(row))
+            #sys.stderr.write("row %s \n" % repr(row))
             if len(cols) == numcols: 
                 all.append( cols )
             else:
