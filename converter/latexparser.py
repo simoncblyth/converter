@@ -574,6 +574,8 @@ class DocParser(object):
     handle_flushleft_env = handle_document_env
     handle_math_env = handle_document_env
     handle_table_env = handle_document_env
+    handle_longtable_env = handle_document_env
+    handle_sideways_env = handle_document_env
 
     def handle_verbatim_env(self):
         text = []
@@ -582,12 +584,14 @@ class DocParser(object):
                 tok = self.tokens.peekmany(3)
                 if tok[0][1] == 'bgroup' and \
                    tok[1][1] == 'text' and \
-                   tok[1][2] == 'verbatim' and \
+                   tok[1][2] in 'verbatim lstlisting'.split() and \
                    tok[2][1] == 'egroup':
                     self.tokens.popmany(3)
                     break
             text.append(r)
         return VerbatimNode(TextNode(''.join(text)))
+    
+    handle_lstlisting_env = handle_verbatim_env
 
     # involved math markup must be corrected manually
     def handle_displaymath_env(self):
@@ -597,12 +601,13 @@ class DocParser(object):
                 tok = self.tokens.peekmany(3)
                 if tok[0][1] == 'bgroup' and \
                    tok[1][1] == 'text' and \
-                   tok[1][2] == 'displaymath' and \
+                   tok[1][2] in 'displaymath equation'.split() and \
                    tok[2][1] == 'egroup':
                     self.tokens.popmany(3)
                     break
             text.append(r)
         return VerbatimNode(TextNode(''.join(text)))
+    handle_equation_env = handle_displaymath_env
 
     # alltt is different from verbatim because it allows markup
     def handle_alltt_env(self):

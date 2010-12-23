@@ -1,0 +1,52 @@
+
+   == Notes on setup of this github repo == 
+
+   === export from SVN into git repo ===
+
+        cd $HOME
+        svn info http://svn.python.org/projects/doctools/converter/ 
+
+          Path: converter
+          URL: http://svn.python.org/projects/doctools/converter
+          Repository Root: http://svn.python.org/projects
+          Repository UUID: 6015fed2-1504-0410-9fe1-9d1591cc4771
+          Revision: 87407
+          Node Kind: directory
+          Last Changed Author: georg.brandl
+          Last Changed Rev: 68972
+          Last Changed Date: 2009-01-27 05:08:02 +0800 (Tue, 27 Jan 2009)
+
+        svn export http://svn.python.org/projects/doctools/converter/ 
+        
+        cd converter
+        git init
+        git add README convert.py converter
+         
+        git commit -m "original latex to reStructuredText converter from python project, exported from  http://svn.python.org/projects/doctools/converter/ last changed rev 68972, revision 87407 "
+   
+
+   === setup a remote git repo on github ===
+
+        git remote add origin git@github.com:scb-/converter.git
+            ## from github dashboard create a new repo named the same as this, ie "converter"
+
+        git push origin master    
+            ## if ssh-agent not running, you will be prompted for passphrase
+
+        ## check the repo appears at   https://github.com/scb-/converter
+
+
+   === apply the patch for the last time ===
+ 
+        cd converter   ## apply the patch from the appropriate dir 
+        patch -p0 < $(converter-patch-path)
+
+        git add __init__.py docnodes.py latexparser.py restwriter.py tokenizer.py test_tokenizer.py 
+        git commit -m "changes to support simple latex tabular environments in a more generic manner " 
+                ## add the changes and commit
+
+        git push origin master
+                 ## push up to github  
+
+            ## redirect the source handling in these functions to github and deprecate the patch manipulations 
+
