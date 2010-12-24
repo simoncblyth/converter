@@ -60,6 +60,7 @@
 # yay!
 from __future__ import with_statement
 
+import os
 import re
 import StringIO
 import textwrap
@@ -79,7 +80,7 @@ textwrap.TextWrapper.wordsep_re = new_wordsep_re
 wrapper = textwrap.TextWrapper(width=WIDTH, break_long_words=False)
 
 from .docnodes import RootNode, TextNode, NodeList, InlineNode, \
-     CommentNode, EmptyNode
+     CommentNode, EmptyNode, GraphicsNode
 from .util import fixup_text, empty, text, my_make_id, \
      repair_bad_inline_markup
 from .filenamemap import includes_mapping
@@ -671,8 +672,43 @@ class RestWriter(object):
                                  spabove=True, spbelow=True)
         elif cmdname == 'XX' 'X':
             self.visit_wrapped(r'**\*\*** ', node.args[0], ' **\*\***')
+        elif cmdname == 'includegraphics':
+            dim = text(node.args[0])
+            path = text(node.args[1]) 
+            path = self.resolve( path , exts=["png","jpg","pdf"] , folds=["",".",".."] )
+            self.write_directive('figure', "../" + path , spabove=True, spbelow=False )
+            swh_p  = re.compile('(?P<qwn>scale|width|height)=(?P<val>.\S*)')
+            swh_m = swh_p.match( dim )
+            if swh_m:
+                swh_d = swh_m.groupdict() 
+                qwn, val = swh_d['qwn'],swh_d['val'] 
+                if qwn == "scale":
+                    fval = float(val)
+                    if fval < 1.01:
+                        val = "%3d %s" % (fval*100,'%')
+                self.write('   :%s: %s' % ( qwn, val)  )
         else:
             raise WriterError('no handler for %s command' % cmdname)
+
+    def resolve_(self, path , exts ):
+        if os.path.exists(path):
+            return path
+        if path[-4]=='.':
+            return None
+        for ext in exts:
+            tp = "%s.%s" % ( path, ext )
+            if os.path.exists( tp ):
+                return tp 
+        return None 
+
+    def resolve(self, path, exts=["pdf","jpg"] , folds=[""] ):
+        for fold in folds:
+            t = os.path.join( fold, path ) if len(fold)>0 else path   
+            p = self.resolve_( t , exts )
+            if p:
+                return p
+        return None
+
 
     def visit_DescLineCommandNode(self, node):
         # these have already been written as arguments of the corresponding
@@ -806,6 +842,9 @@ class RestWriter(object):
         self.write()
 
     def visit_EmptyNode(self, node):
+        pass
+
+    def visit_GraphicsNode(self, node):
         pass
 
     def visit_TextNode(self, node):

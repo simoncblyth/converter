@@ -88,12 +88,12 @@ class DocParser(object):
 
     def finish(self):
         if len(self.unrecognized) != 0:
-            print '\n\nWARNING:\nThe following latex commands are not recognized and are ' \
+            print '\n\n.. warning::\n   The following latex commands are not recognized and are ' \
                 'ignored by this script. You may want to extend the DocParser class and ' \
                 'define functions such as handle_CMD to handle them. You can also override '\
                 'handle_unrecognized.\n'
             for cmd in self.unrecognized:
-                print cmd
+                print "   ",cmd
 
     def parse(self):
         self.rootnode = RootNode(self.filename, None)
@@ -206,6 +206,7 @@ class DocParser(object):
             'verbatiminput': 'T',
             'input': 'T',
             'centerline': 'M',
+            'includegraphics':'OT',
 
             # Pydoc specific commands
             'versionadded': 'OT',
@@ -441,6 +442,12 @@ class DocParser(object):
             self.unrecognized.add(name)
             return EmptyNode()
         return handler
+
+    def handle_includegraphics(self):
+        args = self.parse_args('includegraphics', 'T')
+        print "handler_ig %s " % repr(args)
+        return GraphicsNode() 
+
 
     def handle_special_command(self, cmdname):
         if cmdname in '{}%$^#&_ ':

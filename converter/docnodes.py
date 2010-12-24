@@ -125,6 +125,11 @@ class AmpersandNode(DocNode):
     def __repr__(self):
         return 'Ampersand'
 
+class GraphicsNode(DocNode):
+    """ A graphics node. """
+    def __repr__(self):
+        return 'Graphics'
+
 
 class NbspNode(TextNode):
     """ A non-breaking space. """
