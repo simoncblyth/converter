@@ -673,20 +673,42 @@ class RestWriter(object):
         elif cmdname == 'XX' 'X':
             self.visit_wrapped(r'**\*\*** ', node.args[0], ' **\*\***')
         elif cmdname == 'includegraphics':
-            dim = text(node.args[0])
             path = text(node.args[1]) 
             path = self.resolve( path , exts=["png","jpg","pdf"] , folds=["",".",".."] )
-            self.write_directive('figure', "../" + path , spabove=True, spbelow=False )
-            swh_p  = re.compile('(?P<qwn>scale|width|height)=(?P<val>.\S*)')
+            # leading slash makes paths absolute to the base directory
+            # position "fig" links in base directory if figures are kept outside base (for relative sanity)
+            # trailing .* causes the builders to pick up the appropriate format png for html and pdf for latex
+            self.write_directive('figure', "/" + path[:-4] + '.*' , spabove=True, spbelow=False )
+
+            dim = node.args[0]
+            fac = None
+            if isinstance(dim, TextNode):
+                dim = text(dim) 
+            elif isinstance(dim, NodeList) and len(dim) == 2 and isinstance(dim[0], TextNode) and isinstance(dim[1], InlineNode):
+                print "ig %s %s %s " % (repr(dim), path , dim[1].cmdname )
+                fac = dim[1].cmdname   ## textwidth textheight
+                dim = text(dim[0])
+            else:
+                raise WriterError('fig dimension %s not handled ' % dim ) 
+
+            swh_p  = re.compile('(?P<qwn>scale|width|height)=(?P<num>[\d.]*)(?P<unit>\w*)')  
             swh_m = swh_p.match( dim )
             if swh_m:
                 swh_d = swh_m.groupdict() 
-                qwn, val = swh_d['qwn'],swh_d['val'] 
-                if qwn == "scale":
-                    fval = float(val)
-                    if fval < 1.01:
-                        val = "%3d %s" % (fval*100,'%')
-                self.write('   :%s: %s' % ( qwn, val)  )
+                qwn, num, unit = swh_d['qwn'],swh_d['num'],swh_d['unit'] 
+                fnum = float(num) if num else 1.
+                if qwn in "height width".split():   ## percentages not allowed for heights 
+                    val = ("%3d %s" % (fnum*700,'px') if fnum < 1.01 else "%s%s" % (num, unit) )
+                elif fac in "textwidth textheight columnwidth".split() or qwn == "scale":
+                    val = ("%3d %s" % (fnum*100,'%') if fnum < 1.01 else num)
+                else:
+                    val = "%s%s" % ( num, unit )
+                igopt = '   :%s: %s' % ( qwn, val )  
+                print " %s %s --> %s " % ( path, dim, igopt )
+                self.write(igopt)
+                self.write()
+            else:
+                print "WARNING failed to match %s %s " % ( path , dim ) 
         else:
             raise WriterError('no handler for %s command' % cmdname)
 

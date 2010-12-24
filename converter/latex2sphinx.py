@@ -164,19 +164,18 @@ def convert_doctree( base , dry_run=False  ):
             if _ not in unrecognized:
                 unrecognized.append( _ )
         rst.close()
-
+"""
     print "skeleton structure of the doctree, non-leaf nodes "
     for k,v in inp.skeleton.items():
         if len(v)>0:
             print k, repr(v)
-
 
     print "incorporate the below into the toctree ... "
     print "\n".join(["   %s" % _ for _ in toc])   
 
     print "unrecognized commands : " 
     print "\n".join(["   " + _ for _ in unrecognized]) 
-
+"""
 
 if __name__=='__main__':
     base = sys.argv[1] 

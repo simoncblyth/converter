@@ -206,7 +206,7 @@ class DocParser(object):
             'verbatiminput': 'T',
             'input': 'T',
             'centerline': 'M',
-            'includegraphics':'OT',
+            'includegraphics':'OM',
 
             # Pydoc specific commands
             'versionadded': 'OT',
@@ -256,6 +256,9 @@ class DocParser(object):
             'citetitle': 'QT',
             'ulink': 'MT',
             'url': 'T',
+
+            'textwidth':'', 
+            'textheight':'', 
 
             # mapped to normal
             'textrm': 'M',
@@ -443,10 +446,10 @@ class DocParser(object):
             return EmptyNode()
         return handler
 
-    def handle_includegraphics(self):
-        args = self.parse_args('includegraphics', 'T')
-        print "handler_ig %s " % repr(args)
-        return GraphicsNode() 
+    #def handle_includegraphics(self):
+    #    args = self.parse_args('includegraphics', 'T')
+    #    print "handler_ig %s " % repr(args)
+    #    return GraphicsNode() 
 
 
     def handle_special_command(self, cmdname):
@@ -755,7 +758,7 @@ class DocParser(object):
                 all.append( cols )
             else:
                 pass
-                print "tail skip ", ( repr(cols) , numcols, len(cols) )
+                #print "tail skip ", ( repr(cols) , numcols, len(cols) )
 
 
         if len(all) > 0:
