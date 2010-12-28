@@ -200,6 +200,8 @@ class CommandNode(DocNode):
     def walk(self):
         return self.args
 
+class ExtLinkNode(CommandNode):
+    """ An external link command """
 
 class DescLineCommandNode(CommandNode):
     """ A \\xxxline command. """

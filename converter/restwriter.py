@@ -731,6 +731,10 @@ class RestWriter(object):
                 return p
         return None
 
+    def visit_ExtLinkNode(self, node):
+        #print "visit_ExtLinkNode cmdname %s node %s args[0] %s " % ( node.cmdname, repr(node), node.args[0] )
+        self.write(':%s:`%s`' % (node.cmdname, text(node.args[0]) ))
+        pass
 
     def visit_DescLineCommandNode(self, node):
         # these have already been written as arguments of the corresponding

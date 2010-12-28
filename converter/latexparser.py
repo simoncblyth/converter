@@ -14,7 +14,7 @@ from .docnodes import CommentNode, RootNode, NodeList, ParaSepNode, \
      DescLineCommandNode, InlineNode, IndexNode, SectioningNode, \
      EnvironmentNode, DescEnvironmentNode, TableNode, VerbatimNode, \
      ListNode, ItemizeNode, EnumerateNode, DescriptionNode, \
-     DefinitionsNode, ProductionListNode, AmpersandNode
+     DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode
 
 from .util import umlaut, empty
 import sys
@@ -81,10 +81,13 @@ class DocParser(object):
     """ Parse a Python documentation LaTeX file. """
     __metaclass__ = DocParserMeta
 
-    def __init__(self, tokenstream, filename):
+    def __init__(self, tokenstream, filename, extlinks={}):
         self.tokens = tokenstream
         self.filename = filename
         self.unrecognized = set()
+
+        for name, (patn, prefix) in extlinks.items():
+            setattr( self.__class__ , 'handle_' + name , generic_command( name, 'M' , ExtLinkNode ))
 
     def finish(self):
         if len(self.unrecognized) != 0:
