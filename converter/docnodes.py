@@ -242,6 +242,23 @@ class EnvironmentNode(DocNode):
         return [self.content]
 
 
+class FigureNode(EnvironmentNode):
+    """ A Figure Node """
+    def __init__(self, envname, args, content, opts={} ):
+        self.envname = envname
+        self.args = args
+        self.content = content
+        self.opts = opts
+
+    def __repr__(self):
+        return 'FigureNode(%r, %r, %r, %r)' % (self.envname,
+                                                self.args, self.content, self.opts)
+
+    def walk(self):
+        return [self.content]
+
+     
+
 class DescEnvironmentNode(EnvironmentNode):
     """ An xxxdesc environment. """
     def __init__(self, envname, args, content):
@@ -276,6 +293,14 @@ class VerbatimNode(DocNode):
 
     def __repr__(self):
         return 'VerbatimNode(%r)' % self.content
+
+class ListingNode(VerbatimNode):
+    """ A code listing environment. """
+    def __init__(self, content, args):
+        self.content = content
+        self.args = args 
+    def __repr__(self):
+        return 'ListingNode(%r, %r)' % ( self.content, self.args )
 
 
 class ListNode(DocNode):

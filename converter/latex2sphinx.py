@@ -162,11 +162,18 @@ class Inputs(list):
             yield self, chap, sect
             self.pop()
 
-    
-def convert_doctree( base , dry_run=False, extlinks={}  ):
+def convert_doc( tex , rst=None, extlinks={} , verbose=False, fakechapter=None ):
+    if not rst:
+        rst = tex[:-4]+'.rst'
+    tex = open(tex,"r")
+    rst = open(rst,"w")
+    unrec = _convert_file( tex , rst , fakechapter=fakechapter, extlinks=extlinks )
+    rst.close()
+    return unrec
+
+def convert_doctree( base , dry_run=False, extlinks={} , verbose=False ):
     inp = Inputs()
     toc = []
-
 
     unrecognized = []
     for i,ch,se in inp.walk_(base):
@@ -174,31 +181,27 @@ def convert_doctree( base , dry_run=False, extlinks={}  ):
         tex = inp.resolve(i[-1])
         if not tex.endswith('.tex'):continue
 
-        rst = tex[:-4]+'.rst'
-        toc.append(rst[:-4])
+        toc.append(tex[:-4])
         
-        print "convert %s to %s  ch %s se %s " % ( tex, rst, ch, se )
+        print "converting %s   ch %s se %s " % ( tex, ch, se )
         if dry_run:continue
 
-        tex = open(tex,"r")
-        rst = open(rst,"w")
-        unrec = _convert_file( tex , rst , fakechapter=ch, extlinks=extlinks )
+        unrec = convert_doc( tex , extlinks=extlinks , fakechapter=ch ) 
         for _ in unrec:
             if _ not in unrecognized:
                 unrecognized.append( _ )
-        rst.close()
-"""
-    print "skeleton structure of the doctree, non-leaf nodes "
-    for k,v in inp.skeleton.items():
-        if len(v)>0:
-            print k, repr(v)
 
-    print "incorporate the below into the toctree ... "
-    print "\n".join(["   %s" % _ for _ in toc])   
+    if verbose:
+        print "skeleton structure of the doctree, non-leaf nodes "
+        for k,v in inp.skeleton.items():
+            if len(v)>0:
+                print k, repr(v)
 
-    print "unrecognized commands : " 
-    print "\n".join(["   " + _ for _ in unrecognized]) 
-"""
+        print "incorporate the below into the toctree ... "
+        print "\n".join(["   %s" % _ for _ in toc])   
+
+        print "unrecognized commands : " 
+        print "\n".join(["   " + _ for _ in unrecognized]) 
 
 if __name__=='__main__':
     base = sys.argv[1] 

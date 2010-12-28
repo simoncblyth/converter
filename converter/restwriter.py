@@ -80,7 +80,7 @@ textwrap.TextWrapper.wordsep_re = new_wordsep_re
 wrapper = textwrap.TextWrapper(width=WIDTH, break_long_words=False)
 
 from .docnodes import RootNode, TextNode, NodeList, InlineNode, \
-     CommentNode, EmptyNode, GraphicsNode
+     CommentNode, EmptyNode, GraphicsNode, ListingNode
 from .util import fixup_text, empty, text, my_make_id, \
      repair_bad_inline_markup
 from .filenamemap import includes_mapping
@@ -476,6 +476,10 @@ class RestWriter(object):
         self.write(self.sectchars[node.cmdname] * hl)
         self.write()
 
+    def visit_FigureNode(self, node):
+        self.flush_par()
+        self.visit_node(node.content)
+
     def visit_EnvironmentNode(self, node):
         self.flush_par()
         envname = node.envname
@@ -492,6 +496,8 @@ class RestWriter(object):
             self.write()
         elif envname == 'quotation':
             self.write_directive('epigraph', '', node.content, spabove=True)
+        elif envname == 'lstlisting':
+            self.visit_VerbatimNode(node)
         else:
             raise WriterError('no handler for %s environment' % envname)
 
@@ -529,6 +535,7 @@ class RestWriter(object):
 
     def visit_DescEnvironmentNode(self, node):
         envname = node.envname
+
         if envname not in self.descmap:
             raise WriterError('no handler for %s environment' % envname)
 
@@ -706,9 +713,19 @@ class RestWriter(object):
                 igopt = '   :%s: %s' % ( qwn, val )  
                 print " %s %s --> %s " % ( path, dim, igopt )
                 self.write(igopt)
+                self.write('   :align: center')
                 self.write()
+
             else:
                 print "WARNING failed to match %s %s " % ( path , dim ) 
+        elif cmdname == 'centering':
+            pass
+        elif cmdname == 'caption':
+            print "caption %s " % repr(node)
+            self.write()
+            with self.indented():
+                self.visit_node(node.args[1])
+            self.write()
         else:
             raise WriterError('no handler for %s command' % cmdname)
 
@@ -733,7 +750,7 @@ class RestWriter(object):
 
     def visit_ExtLinkNode(self, node):
         #print "visit_ExtLinkNode cmdname %s node %s args[0] %s " % ( node.cmdname, repr(node), node.args[0] )
-        self.write(':%s:`%s`' % (node.cmdname, text(node.args[0]) ))
+        self.curpar.append(':%s:`%s`' % (node.cmdname, text(node.args[0]) ))
         pass
 
     def visit_DescLineCommandNode(self, node):
@@ -744,18 +761,41 @@ class RestWriter(object):
     def visit_ParaSepNode(self, node):
         self.flush_par()
 
+    def visit_ListingNode(self, node):
+        self.visit_VerbatimNode(node) 
+
     def visit_VerbatimNode(self, node):
+
+        #print "visit_Verbatim node.content %s " % repr(node)
+        if node.content == ' ':
+            return
+
         if self.comments:
             # these interfer with the literal block
             self.flush_par()
-        if self.curpar:
-            last = self.curpar[-1].rstrip(' ')
-            if last.endswith(':'):
-                self.curpar[-1] = last + ':'
-            else:
-                self.curpar.append(' ::')
+
+        if isinstance( node, ListingNode):
+            self.flush_par()
+            llargs = text(node.args[0]).lower().split(",")
+            llang = re.compile("language=(\S*)")  ## emph ignored
+            lang = 'guess'
+            for lla in llargs:
+               m = llang.match(lla)
+               if m:
+                   lang = m.group(1)
+                   if lang=='shell':
+                       lang='sh'
+            self.write_directive('code-block', lang , EmptyNode() , spabove=True ) 
         else:
-            self.curpar.append('::')
+            if self.curpar:
+                last = self.curpar[-1].rstrip(' ')
+                if last.endswith(':'):
+                    self.curpar[-1] = last + ':'
+                else:
+                    self.curpar.append(' ::')
+            else:
+                self.curpar.append('::')
+
         self.flush_par()
         with self.indented():
             if isinstance(node.content, TextNode):
@@ -1010,6 +1050,8 @@ class RestWriter(object):
         elif cmdname == 'footnote':
             self.curpar.append(' [#]_')
             self.footnotes.append(content)
+        elif cmdname == 'cite':
+            self.curpar.append(' [%s]_' % text(content) )  ## citation is going nowhere 
         elif cmdname == 'frac':
             self.visit_wrapped('(', node.args[0], ')/')
             self.visit_wrapped('(', node.args[1], ')')

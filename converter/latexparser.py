@@ -14,7 +14,7 @@ from .docnodes import CommentNode, RootNode, NodeList, ParaSepNode, \
      DescLineCommandNode, InlineNode, IndexNode, SectioningNode, \
      EnvironmentNode, DescEnvironmentNode, TableNode, VerbatimNode, \
      ListNode, ItemizeNode, EnumerateNode, DescriptionNode, \
-     DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode
+     DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode, ListingNode, FigureNode
 
 from .util import umlaut, empty
 import sys
@@ -208,7 +208,9 @@ class DocParser(object):
             'localmoduletable': '',
             'verbatiminput': 'T',
             'input': 'T',
+            'caption': 'OM',
             'centerline': 'M',
+            'centering': '',
             'includegraphics':'OM',
 
             # Pydoc specific commands
@@ -253,6 +255,7 @@ class DocParser(object):
 
         InlineNode: {
             # specials
+            'cite': 'M',
             'footnote': 'M',
             'frac': 'TT',
             'refmodule': 'QT',
@@ -403,6 +406,7 @@ class DocParser(object):
             'protect': '',
             'ifhtml': '',
             'fi': '',
+            'pagebreak': '',
         },
     }
 
@@ -448,12 +452,6 @@ class DocParser(object):
             self.unrecognized.add(name)
             return EmptyNode()
         return handler
-
-    #def handle_includegraphics(self):
-    #    args = self.parse_args('includegraphics', 'T')
-    #    print "handler_ig %s " % repr(args)
-    #    return GraphicsNode() 
-
 
     def handle_special_command(self, cmdname):
         if cmdname in '{}%$^#&_ ':
@@ -597,14 +595,34 @@ class DocParser(object):
                 tok = self.tokens.peekmany(3)
                 if tok[0][1] == 'bgroup' and \
                    tok[1][1] == 'text' and \
-                   tok[1][2] in 'verbatim lstlisting'.split() and \
+                   tok[1][2] == 'verbatim' and \
                    tok[2][1] == 'egroup':
                     self.tokens.popmany(3)
                     break
             text.append(r)
+        #print "handle_verbatim_env %s " % repr(text)
         return VerbatimNode(TextNode(''.join(text)))
-    
-    handle_lstlisting_env = handle_verbatim_env
+   
+    def handle_lstlisting_env(self):
+        text = []
+        args = self.parse_args('\\lstlisting', 'O')
+        #print "args", args   
+
+        for l, t, v, r in self.tokens:
+            #print l,t,v,r
+            if t == 'command' and v == 'end' :
+                tok = self.tokens.peekmany(3)
+                if tok[0][1] == 'bgroup' and \
+                   tok[1][1] == 'text' and \
+                   tok[1][2] == 'lstlisting' and \
+                   tok[2][1] == 'egroup':
+                    self.tokens.popmany(3)
+                    break
+            text.append(r)
+
+        lstn = ListingNode(TextNode(''.join(text)), args )
+        #print "lstn %s " % repr(lstn)
+        return lstn
 
     # involved math markup must be corrected manually
     def handle_displaymath_env(self):
@@ -772,9 +790,25 @@ class DocParser(object):
             print "WARNING returning EMPTY"
             return EmptyNode()        
 
- 
     def handle_figure_env(self):
-        return EmptyNode()
+        args = self.parse_args('figure', 'Q')
+        print "handle_figure_env %s " % repr(args) 
+        content = self.parse_until(self.environment_end)
+        opts = {}
+        priority = dict( includegraphics=1, caption=2, label=3 )
+        def order(n):
+            if isinstance(n, CommandNode): 
+                return priority.get(n.cmdname,0)
+            else:
+                return 0 
+        newcontent = NodeList()
+        for n in sorted(content,key=order):
+            if isinstance(n, CommandNode) and n.cmdname == 'centering':
+                opts['align'] = "center"
+            print repr(n)
+            newcontent.append(n)
+        return FigureNode("figure", args, newcontent, opts=opts)
+
     def handle_center_env(self):
         return EmptyNode()
 
