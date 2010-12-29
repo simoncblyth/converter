@@ -12,12 +12,38 @@
 from .docnodes import CommentNode, RootNode, NodeList, ParaSepNode, \
      TextNode, EmptyNode, NbspNode, SimpleCmdNode, BreakNode, CommandNode, \
      DescLineCommandNode, InlineNode, IndexNode, SectioningNode, \
-     EnvironmentNode, DescEnvironmentNode, TableNode, VerbatimNode, \
+     EnvironmentNode, DescEnvironmentNode, TableNode, TabularNode, VerbatimNode, \
      ListNode, ItemizeNode, EnumerateNode, DescriptionNode, \
      DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode, ListingNode, FigureNode
 
 from .util import umlaut, empty
 import sys
+
+def walk(node):
+    for x in node.walk():
+        #print repr(x)
+        yield x
+        for y in walk(x):
+            yield y
+
+def fwalk(node, filter_=lambda:True):
+    return filter(filter_, [_ for _ in walk(node)] )
+
+def find_label(node):
+    """ walk ahead to find the label """
+    nlabel = fwalk(node, lambda _:isinstance(_,CommandNode) and _.cmdname == 'label')
+    if len(nlabel) == 0:
+        return None
+    nlabel = nlabel[0]
+    return ( nlabel.args[0].text.lower() if  isinstance(nlabel.args[0], TextNode) else None)
+
+def find_caption_node(node):
+    """ walk ahead to find the label """
+    ncaption = fwalk(node, lambda _:isinstance(_,CommandNode) and _.cmdname == 'caption')
+    if len(ncaption) == 0:
+        return None
+    return ncaption[0]
+
 
 class ParserError(Exception):
     def __init__(self, msg, lineno):
@@ -209,6 +235,7 @@ class DocParser(object):
             'verbatiminput': 'T',
             'input': 'T',
             'caption': 'OM',
+            'fixme': 'M',
             'centerline': 'M',
             'centering': '',
             'includegraphics':'OM',
@@ -407,6 +434,12 @@ class DocParser(object):
             'ifhtml': '',
             'fi': '',
             'pagebreak': '',
+            'lstset': '',
+            'clearpage': '',
+            'footnotesize': '',
+            'normalsize': '',
+            'huge': '',
+            'hline': '',
         },
     }
 
@@ -416,6 +449,7 @@ class DocParser(object):
             'abstract': '',
             'quote': '',
             'quotation': '',
+            'center':'',
 
             'notice': 'Q',
             'seealso': '',
@@ -448,6 +482,10 @@ class DocParser(object):
 
     # ------------------------- special handlers -----------------------------
     def handle_unrecognized(self, name, line):
+
+        killers = ("em",)
+        if name in killers:
+            assert False , "killer command %s found at line %s " % ( name, line ) 
         def handler():
             self.unrecognized.add(name)
             return EmptyNode()
@@ -584,7 +622,6 @@ class DocParser(object):
     handle_sloppypar_env = handle_document_env
     handle_flushleft_env = handle_document_env
     handle_math_env = handle_document_env
-    handle_table_env = handle_document_env
     handle_longtable_env = handle_document_env
     handle_sideways_env = handle_document_env
 
@@ -739,15 +776,15 @@ class DocParser(object):
     handle_tablev_env = mk_table_handler(None, 'v', 5)
     handle_longtablev_env = handle_tablev_env
 
-
     def handle_tabular_env(self):
         args = self.parse_args('tabular', 'T' )
 
         colspec = args[0].text 
         colspec = colspec.replace('|','')
         numcols = len(colspec)
-        #sys.stderr.write( "_tabylat %s colspec %s numcols %d \n" % (  repr(args), colspec, numcols ) )
-       
+      
+        
+ 
         all = []
         running = [False]
 
@@ -774,43 +811,43 @@ class DocParser(object):
                 else:
                     elem.append(c)
 
-            #sys.stderr.write("row %s \n" % repr(row))
             if len(cols) == numcols: 
                 all.append( cols )
             else:
                 pass
                 #print "tail skip ", ( repr(cols) , numcols, len(cols) )
 
-
         if len(all) > 0:
             headings = all[0]
             lines = all[1:]
-            return TableNode(numcols, headings, lines)
+            return TabularNode(numcols, headings, lines )
         else:
             print "WARNING returning EMPTY"
             return EmptyNode()        
 
-    def handle_figure_env(self):
-        args = self.parse_args('figure', 'Q')
-        print "handle_figure_env %s " % repr(args) 
+
+    def handle_table_env(self): 
+        args = self.parse_args('table', 'Q' )
         content = self.parse_until(self.environment_end)
         opts = {}
-        priority = dict( includegraphics=1, caption=2, label=3 )
-        def order(n):
-            if isinstance(n, CommandNode): 
-                return priority.get(n.cmdname,0)
-            else:
-                return 0 
-        newcontent = NodeList()
-        for n in sorted(content,key=order):
+        opts['label'] = find_label( content )
+        opts['caption_node'] = find_caption_node( content )
+        tn = TableNode("table", [], content, opts=opts )
+        #print "handle_table_env %r " % ( tn ) 
+        return tn
+
+
+    def handle_figure_env(self):
+        args = self.parse_args('figure', 'Q')
+        content = self.parse_until(self.environment_end)
+        opts = {}
+        opts['label'] = find_label( content )
+        for n in content:
             if isinstance(n, CommandNode) and n.cmdname == 'centering':
                 opts['align'] = "center"
-            print repr(n)
-            newcontent.append(n)
-        return FigureNode("figure", args, newcontent, opts=opts)
-
-    def handle_center_env(self):
-        return EmptyNode()
+        fn = FigureNode("figure", args, content, opts=opts )
+        #print "handle_figure_env %r %r " % (args, fn ) 
+        return fn
 
     def handle_productionlist_env(self):
         env_args = self.parse_args('productionlist', 'Q')

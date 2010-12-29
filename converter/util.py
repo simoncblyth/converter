@@ -11,7 +11,7 @@ import re
 
 from docutils.nodes import make_id
 
-from .docnodes import TextNode, EmptyNode, NodeList
+from .docnodes import TextNode, EmptyNode, NodeList, CommandNode
 
 
 def umlaut(cmd, c):
@@ -47,17 +47,21 @@ def fixup_text(text):
 def empty(node):
     return (type(node) is EmptyNode)
 
-def text(node):
+def text(node, skipcmd=[]):
     """ Return the text for a TextNode or raise an error. """
     if isinstance(node, TextNode):
         return node.text
+    elif isinstance(node, CommandNode) and node.cmdname in skipcmd:
+        return ''
     elif isinstance(node, NodeList):
         restext = ''
         for subnode in node:
-            restext += text(subnode)
+            restext += text(subnode, skipcmd=skipcmd)
         return restext
     from .restwriter import WriterError
     raise WriterError('text() failed for %r' % node)
+
+
 
 markup_re = re.compile(r'(:[a-zA-Z0-9_-]+:)?`(.*?)`')
 

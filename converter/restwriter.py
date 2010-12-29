@@ -175,6 +175,9 @@ class RestWriter(object):
         self.noescape = 0               # don't escape text nodes
         self.indexsubitem = ''          # current \withsubitem text
 
+        self.floatnode = None           # allow different behavior inside floats : figure/table envs
+        self.floatlabel = None          # allow control of float label positioning no matter where in tex 
+ 
     def write_document(self, rootnode):
         """ Write a document, represented by a RootNode. """
         assert type(rootnode) is RootNode
@@ -477,8 +480,25 @@ class RestWriter(object):
         self.write()
 
     def visit_FigureNode(self, node):
+        self.floatnode = node
+        self.floatlabel = node.opts.get('label',None)
         self.flush_par()
+        if self.floatlabel:
+            self.write('.. _%s:' % self.floatlabel)
         self.visit_node(node.content)
+        self.floatnode = None
+        self.floatlabel = None
+        
+    def visit_TableNode(self, node):
+        self.floatnode = node
+        label = node.opts.get('label',None)
+        caption = node.opts.get('caption_node','')
+        if label:
+            self.write('.. _%s:' % label)
+        self.write_directive('table', text(caption.args[1],skipcmd=['label']) , spabove=False, spbelow=True)
+        with self.indented():
+            self.visit_node(node.content)
+        self.floatnode = None
 
     def visit_EnvironmentNode(self, node):
         self.flush_par()
@@ -498,6 +518,8 @@ class RestWriter(object):
             self.write_directive('epigraph', '', node.content, spabove=True)
         elif envname == 'lstlisting':
             self.visit_VerbatimNode(node)
+        elif envname == 'center':
+            self.visit_node(node.content)
         else:
             raise WriterError('no handler for %s environment' % envname)
 
@@ -578,9 +600,12 @@ class RestWriter(object):
         cmdname = node.cmdname
         if cmdname == 'label':
             labelname = self.labelprefix + text(node.args[0]).lower()
+
             if self.no_flushing:
                 # in section
                 self.sectionlabel = labelname
+            elif self.floatnode:
+                self.floatlabel = labelname 
             else:
                 self.flush_par()
                 self.write('.. _%s:\n' % labelname)
@@ -609,7 +634,9 @@ class RestWriter(object):
             self.flush_cb = lambda: self.write_sectionmeta()
             return
 
-        self.flush_par()
+        if not self.no_flushing:
+            self.flush_par()
+
         if cmdname.startswith('see'):
             i = 2
             if cmdname == 'seemodule':
@@ -685,14 +712,14 @@ class RestWriter(object):
             # leading slash makes paths absolute to the base directory
             # position "fig" links in base directory if figures are kept outside base (for relative sanity)
             # trailing .* causes the builders to pick up the appropriate format png for html and pdf for latex
-            self.write_directive('figure', "/" + path[:-4] + '.*' , spabove=True, spbelow=False )
+            self.write_directive('figure', "/" + path[:-4] + '.*' , spabove=False, spbelow=False )
 
             dim = node.args[0]
             fac = None
             if isinstance(dim, TextNode):
                 dim = text(dim) 
             elif isinstance(dim, NodeList) and len(dim) == 2 and isinstance(dim[0], TextNode) and isinstance(dim[1], InlineNode):
-                print "ig %s %s %s " % (repr(dim), path , dim[1].cmdname )
+                #print "ig %s %s %s " % (repr(dim), path , dim[1].cmdname )
                 fac = dim[1].cmdname   ## textwidth textheight
                 dim = text(dim[0])
             else:
@@ -711,21 +738,26 @@ class RestWriter(object):
                 else:
                     val = "%s%s" % ( num, unit )
                 igopt = '   :%s: %s' % ( qwn, val )  
-                print " %s %s --> %s " % ( path, dim, igopt )
+                #print " %s %s --> %s " % ( path, dim, igopt )
                 self.write(igopt)
-                self.write('   :align: center')
+                #self.write('   :align: center')
+                self.write()
+                self.write('   **%s**' % self.floatlabel )   
                 self.write()
 
             else:
                 print "WARNING failed to match %s %s " % ( path , dim ) 
         elif cmdname == 'centering':
             pass
+        elif cmdname == 'fixme':
+            self.curpar.append("**FIXME** ")
+            self.visit_node(node.args[0])
         elif cmdname == 'caption':
-            print "caption %s " % repr(node)
-            self.write()
-            with self.indented():
-                self.visit_node(node.args[1])
-            self.write()
+            if self.floatnode and self.floatnode.envname == 'table':
+                pass
+            else: 
+                with self.indented():
+                    self.visit_node(node.args[1])
         else:
             raise WriterError('no handler for %s command' % cmdname)
 
@@ -814,8 +846,9 @@ class RestWriter(object):
                 self.write(line)
 
     note_re = re.compile('^\(\d\)$')
+    
 
-    def visit_TableNode(self, node):
+    def visit_TabularNode(self, node):
         self.flush_par()
         lines = node.lines[:]
         lines.insert(0, node.headings)

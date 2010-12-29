@@ -242,8 +242,8 @@ class EnvironmentNode(DocNode):
         return [self.content]
 
 
-class FigureNode(EnvironmentNode):
-    """ A Figure Node """
+class FloatNode(EnvironmentNode):
+    """ A Float environment node base for table/figure   """
     def __init__(self, envname, args, content, opts={} ):
         self.envname = envname
         self.args = args
@@ -251,13 +251,18 @@ class FigureNode(EnvironmentNode):
         self.opts = opts
 
     def __repr__(self):
-        return 'FigureNode(%r, %r, %r, %r)' % (self.envname,
+        return '%s(%r, %r, %r ; %r)' % ( self.__class__.__name__, self.envname,
                                                 self.args, self.content, self.opts)
-
     def walk(self):
         return [self.content]
 
-     
+class FigureNode(FloatNode):
+    """ A Figure Node """
+
+class TableNode(FloatNode):
+    """ A Table Node """
+      
+
 
 class DescEnvironmentNode(EnvironmentNode):
     """ An xxxdesc environment. """
@@ -272,15 +277,15 @@ class DescEnvironmentNode(EnvironmentNode):
                                                     self.args, self.content)
 
 
-class TableNode(EnvironmentNode):
-    def __init__(self, numcols, headings, lines):
+class TabularNode(EnvironmentNode):
+    def __init__(self, numcols, headings, lines ):
         self.numcols = numcols
         self.headings = headings
         self.lines = lines
 
     def __repr__(self):
-        return 'TableNode(%r, %r, %r)' % (self.numcols,
-                                          self.headings, self.lines)
+        return 'TabularNode(%r, %r, %r )' % (self.numcols,
+                                          self.headings, self.lines )
 
     def walk(self):
         return []

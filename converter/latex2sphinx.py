@@ -203,6 +203,29 @@ def convert_doctree( base , dry_run=False, extlinks={} , verbose=False ):
         print "unrecognized commands : " 
         print "\n".join(["   " + _ for _ in unrecognized]) 
 
+
+
+
+from nose.tools import make_decorator
+def CNV(dummy=True):
+    def _decorate(func):
+        def _wrapper(*args, **kargs):
+            unrec = convert_tex(func.__doc__, **kargs)
+            assert len(unrec) == 0
+        _wrapper = make_decorator(func)(_wrapper)
+        return _wrapper
+    return _decorate
+
+
+
+from cStringIO import StringIO
+
+def convert_tex( tex ):
+    return  _convert_file( StringIO(tex) , sys.stdout )
+
+
+
+
 if __name__=='__main__':
     base = sys.argv[1] 
     convert_doctree(base) 
