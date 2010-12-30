@@ -179,6 +179,8 @@ def convert_doctree( base , dry_run=False, extlinks={} , verbose=False ):
     for i,ch,se in inp.walk_(base):
         #print i 
         tex = inp.resolve(i[-1])
+        assert tex, "convert_doctree failed to resolve input %r " % i
+          
         if not tex.endswith('.tex'):continue
 
         toc.append(tex[:-4])

@@ -482,6 +482,7 @@ class RestWriter(object):
     def visit_FigureNode(self, node):
         self.floatnode = node
         self.floatlabel = node.opts.get('label',None)
+        self.listing = node.opts.get('listing',None)
         self.flush_par()
         if self.floatlabel:
             self.write('.. _%s:' % self.floatlabel)
@@ -520,6 +521,8 @@ class RestWriter(object):
             self.visit_VerbatimNode(node)
         elif envname == 'center':
             self.visit_node(node.content)
+        elif envname == 'em':
+            self.write_directive('note', '', node.content, spabove=True)
         else:
             raise WriterError('no handler for %s environment' % envname)
 
@@ -794,30 +797,37 @@ class RestWriter(object):
         self.flush_par()
 
     def visit_ListingNode(self, node):
-        self.visit_VerbatimNode(node) 
+        if self.floatnode:
+            with self.indented():
+                self.visit_VerbatimNode(node) 
+        else:
+            self.visit_VerbatimNode(node) 
 
     def visit_VerbatimNode(self, node):
-
-        #print "visit_Verbatim node.content %s " % repr(node)
         if node.content == ' ':
             return
-
         if self.comments:
             # these interfer with the literal block
             self.flush_par()
 
         if isinstance( node, ListingNode):
-            self.flush_par()
-            llargs = text(node.args[0]).lower().split(",")
-            llang = re.compile("language=(\S*)")  ## emph ignored
-            lang = 'guess'
+            if not self.floatnode:
+                self.flush_par()
+            targ = self.get_node_text(self.get_textonly_node(node.args[0], warn=0))  ## adornments dropped
+            llargs = targ.split(",")
+            llang = re.compile("\s*(?P<key>language|caption|label)=(?P<val>.*)")  
+            lld = {}
             for lla in llargs:
                m = llang.match(lla)
                if m:
-                   lang = m.group(1)
-                   if lang=='shell':
-                       lang='sh'
-            self.write_directive('code-block', lang , EmptyNode() , spabove=True ) 
+                   d = m.groupdict()
+                   lld[d['key']] = d['val']            
+               else:
+                   pass
+                   #print "lla %r nomatch " % lla
+            #print "llargs %r \n   --> %r " % ( targ , lld )
+            lang = lld.get('lang', 'guess') 
+            self.write_directive('code-block', lang , EmptyNode() , spabove=False ) 
         else:
             if self.curpar:
                 last = self.curpar[-1].rstrip(' ')

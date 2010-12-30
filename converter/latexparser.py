@@ -44,6 +44,14 @@ def find_caption_node(node):
         return None
     return ncaption[0]
 
+def find_subnode(node, type=ListingNode):
+    """ walk ahead to look for listing """
+    nfound = fwalk(node, lambda _:isinstance(_,type))
+    if len(nfound) == 0:
+        return None
+    return nfound[0]
+
+
 
 class ParserError(Exception):
     def __init__(self, msg, lineno):
@@ -434,7 +442,6 @@ class DocParser(object):
             'ifhtml': '',
             'fi': '',
             'pagebreak': '',
-            'lstset': '',
             'clearpage': '',
             'footnotesize': '',
             'normalsize': '',
@@ -450,6 +457,7 @@ class DocParser(object):
             'quote': '',
             'quotation': '',
             'center':'',
+            'em':'',
 
             'notice': 'Q',
             'seealso': '',
@@ -515,9 +523,10 @@ class DocParser(object):
         raise ParserError('no handler for \\%s command' % cmdname,
                           self.tokens.peek()[0])
 
-
-
-
+    def handle_lstset(self):
+        args = self.parse_args('\\lstset', 'M')   # need to parse the args to prevent them being spilled
+        #print "handle_lstset %r " % args 
+        return EmptyNode()
 
     def handle_begin(self):
         envname, = self.parse_args('begin', 'T')
@@ -547,7 +556,6 @@ class DocParser(object):
                                                  'shortversion')
     handle_setreleaseinfo = mk_metadata_handler(None, 'setreleaseinfo',
                                                 'releaseinfo')
-
     def handle_note(self):
         note = self.parse_args('\\note', 'M')[0]
         return EnvironmentNode('notice', [TextNode('note')], note)
@@ -624,6 +632,7 @@ class DocParser(object):
     handle_math_env = handle_document_env
     handle_longtable_env = handle_document_env
     handle_sideways_env = handle_document_env
+
 
     def handle_verbatim_env(self):
         text = []
@@ -782,8 +791,8 @@ class DocParser(object):
         colspec = args[0].text 
         colspec = colspec.replace('|','')
         numcols = len(colspec)
-      
-        
+     
+        #print "handle_tabular_env numcols %s " % ( numcols )
  
         all = []
         running = [False]
@@ -802,6 +811,8 @@ class DocParser(object):
             row.append( self.parse_until(endrow_condition) )
             row.append( AmpersandNode())
 
+            #print "row %r " % row 
+
             cols = []
             elem = NodeList()            
             for c in row:
@@ -811,6 +822,7 @@ class DocParser(object):
                 else:
                     elem.append(c)
 
+            #print "cols %r " % cols 
             if len(cols) == numcols: 
                 all.append( cols )
             else:
@@ -822,6 +834,7 @@ class DocParser(object):
             lines = all[1:]
             return TabularNode(numcols, headings, lines )
         else:
+            assert False, "handle_tabular_env failed to parse any table rows matching the column spec %s %s CHECK TABULAR COLS MATCH THE SPEC " % ( colspec, numcols )
             print "WARNING returning EMPTY"
             return EmptyNode()        
 
@@ -842,6 +855,7 @@ class DocParser(object):
         content = self.parse_until(self.environment_end)
         opts = {}
         opts['label'] = find_label( content )
+        opts['listing'] = find_subnode( content, type=ListingNode )  ## a dummy figure as vehicle for a code listing
         for n in content:
             if isinstance(n, CommandNode) and n.cmdname == 'centering':
                 opts['align'] = "center"
