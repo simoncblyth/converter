@@ -74,7 +74,13 @@ restwriter.includes_mapping = IncludeRewrite()
 
 def _convert_file(inf, outf, doraise=True, splitchap=False,
                  toctree=None, deflang=None, labelprefix='', fakechapter=None, fakesection=None, extlinks={} ):
-    
+    """
+   
+         *fakechapter* and *fakesection* preprend the chapter or section definition to 
+         the content read from the source latex file, allowing the converted reST to 
+         incorporate the chapter/section title without needing to change the latex source 
+ 
+    """
     content = inf.read()
     if fakechapter:
         content = "\chapter{%s}\n" % fakechapter + content 
@@ -90,6 +96,11 @@ def _convert_file(inf, outf, doraise=True, splitchap=False,
         outf.write(".. warning:: latexparser did not recognize : " + " ".join(p.unrecognized))
     return p.unrecognized
 
+
+
+class Inpf(dict):
+    """ input node """
+    __str__ = lambda self:self['name']
 
 class Inputs(list):
     se_patn = re.compile(r"^\\section{(.*)}")
@@ -110,6 +121,7 @@ class Inputs(list):
         else:
            return None 
 
+
     def list_inputs(self, name):
         """
            Return a list of all latex input command arguments
@@ -122,10 +134,12 @@ class Inputs(list):
            A list ['name1','name2','name2.tex'] is returned 
  
         """
-        _inputs = []
-        path = self.resolve(name)
         chap = None
         sect = None
+        inpf = None
+        _inputs = []
+ 
+        path = self.resolve(name)
         self.skeleton[path] = []
         if path:
             for line in open(path, "r").readlines():
@@ -142,7 +156,8 @@ class Inputs(list):
                     inpf = i.group(1)
                     if inpf not in _inputs:
                         _inputs.append((inpf, chap, sect,))
-                        self.skeleton[path].append(inpf)
+                        inode = Inpf(name=inpf,chap=chap,sect=sect,parent=name)
+                        self.skeleton[path].append(inode)
         else:
             print "failed to resolve %s " % name
         return _inputs    
@@ -162,14 +177,37 @@ class Inputs(list):
             yield self, chap, sect
             self.pop()
 
-def convert_doc( tex , rst=None, extlinks={} , verbose=False, fakechapter=None ):
+
+
+def convert_doc( tex , rst=None, **kwa ):
     if not rst:
         rst = tex[:-4]+'.rst'
     tex = open(tex,"r")
     rst = open(rst,"w")
-    unrec = _convert_file( tex , rst , fakechapter=fakechapter, extlinks=extlinks )
+    unrec = _convert_file( tex , rst , **kwa )
     rst.close()
     return unrec
+
+def title( t ):
+    if not t:return ""
+    bar = "*" * len(t)
+    return "\n".join( [bar,t,bar] ) + "\n"
+
+def tocline( inp ):
+    def untex(_):
+        return (_[:-4] if _.endswith(".tex") else _)
+    return "   %s <%s>" % ( inp['sect'] or inp['chap'] , untex(inp['name']) ) 
+
+def toctree( inps ):
+    return ".. toctree::\n\n" + "\n".join([ tocline(_) for _ in inps ]) + "\n"
+
+def comment( t ):
+    return ".. % " + t 
+
+def index( k, v ):
+    return "\n".join([comment(k),title(k),toctree(v)])
+ 
+
 
 def convert_doctree( base , dry_run=False, extlinks={} , verbose=False ):
     inp = Inputs()
@@ -180,15 +218,13 @@ def convert_doctree( base , dry_run=False, extlinks={} , verbose=False ):
         #print i 
         tex = inp.resolve(i[-1])
         assert tex, "convert_doctree failed to resolve input %r " % i
-          
         if not tex.endswith('.tex'):continue
 
         toc.append(tex[:-4])
-        
         print "converting %s   ch %s se %s " % ( tex, ch, se )
         if dry_run:continue
 
-        unrec = convert_doc( tex , extlinks=extlinks , fakechapter=ch ) 
+        unrec = convert_doc( tex , extlinks=extlinks , fakechapter=ch, fakesection=se ) 
         for _ in unrec:
             if _ not in unrecognized:
                 unrecognized.append( _ )
@@ -197,13 +233,13 @@ def convert_doctree( base , dry_run=False, extlinks={} , verbose=False ):
         print "skeleton structure of the doctree, non-leaf nodes "
         for k,v in inp.skeleton.items():
             if len(v)>0:
-                print k, repr(v)
+                #print repr(v)
+                print index(k,v)
+                 
+        #print "incorporate the below into the toctree ... "
+        #print "\n".join(["   %s" % _ for _ in toc])   
 
-        print "incorporate the below into the toctree ... "
-        print "\n".join(["   %s" % _ for _ in toc])   
-
-        print "unrecognized commands : " 
-        print "\n".join(["   " + _ for _ in unrecognized]) 
+        print "unrecognized commands : "  + " ".join(["   " + _ for _ in unrecognized]) 
 
 
 
