@@ -14,10 +14,10 @@ from .docnodes import CommentNode, RootNode, NodeList, ParaSepNode, \
      DescLineCommandNode, InlineNode, IndexNode, SectioningNode, \
      EnvironmentNode, DescEnvironmentNode, TableNode, TabularNode, VerbatimNode, \
      ListNode, ItemizeNode, EnumerateNode, DescriptionNode, \
-     DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode, ListingNode, FigureNode
+     DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode, ListingNode, FigureNode, MathNode
 
 from .util import umlaut, empty
-import sys
+import sys, re
 
 def walk(node):
     for x in node.walk():
@@ -629,7 +629,6 @@ class DocParser(object):
 
     handle_sloppypar_env = handle_document_env
     handle_flushleft_env = handle_document_env
-    handle_math_env = handle_document_env
     handle_longtable_env = handle_document_env
     handle_sideways_env = handle_document_env
 
@@ -672,19 +671,36 @@ class DocParser(object):
 
     # involved math markup must be corrected manually
     def handle_displaymath_env(self):
-        text = ['XXX: translate this math']
+        text = ['\\begin','{','equation','}','\\n']
+        nodelist = NodeList()
         for l, t, v, r in self.tokens:
-            if t == 'command' and v == 'end' :
-                tok = self.tokens.peekmany(3)
-                if tok[0][1] == 'bgroup' and \
-                   tok[1][1] == 'text' and \
-                   tok[1][2] in 'displaymath equation'.split() and \
-                   tok[2][1] == 'egroup':
-                    self.tokens.popmany(3)
-                    break
+            print l,t,v,r
+            #if t == 'command' and v == 'end' :
+            #     tok = self.tokens.peekmany(3)
+            #     if tok[0][1] == 'bgroup' and \
+            #        tok[1][1] == 'text' and \
+            #        tok[1][2] == 'equation' and \
+            #        tok[2][1] == 'egroup':
+            #        self.tokens.popmany(3)
+            #        break
             text.append(r)
-        return VerbatimNode(TextNode(''.join(text)))
+
+        txt = ''.join(text)
+
+        label_ptn = re.compile("\\label\{(\S*)\}") 
+        label_m = label_ptn.search(txt)
+        if label_m:
+            label = label_m.group(1)
+        else:
+            label = "dummy"
+
+
+        print txt 
+        txtl = NodeList(map(TextNode,txt.split("\\n")))
+        return MathNode(txtl, label=label)
     handle_equation_env = handle_displaymath_env
+    handle_eqnarray_env = handle_displaymath_env
+    handle_math_env = handle_displaymath_env
 
     # alltt is different from verbatim because it allows markup
     def handle_alltt_env(self):

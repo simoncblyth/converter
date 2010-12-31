@@ -501,6 +501,18 @@ class RestWriter(object):
             self.visit_node(node.content)
         self.floatnode = None
 
+    def visit_MathNode(self, node):
+        """
+          loosing newlines
+        """
+        self.write_directive('math', '' , spabove=True, spbelow=False)
+        self.write('   :nowrap:')
+        self.write('   :label: %s' % node.label )
+        self.write()
+        with self.indented():
+            self.visit_node(node.content)
+
+
     def visit_EnvironmentNode(self, node):
         self.flush_par()
         envname = node.envname

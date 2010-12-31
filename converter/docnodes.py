@@ -299,6 +299,17 @@ class VerbatimNode(DocNode):
     def __repr__(self):
         return 'VerbatimNode(%r)' % self.content
 
+
+class MathNode(DocNode):
+    """ A verbatim math block : equation/eqnarray/etc... """
+    def __init__(self, content, label=None):
+        self.content = content
+        self.label = label
+
+    def __repr__(self):
+        return 'MathNode(%r;%r)' % (self.content,self.label)
+
+
 class ListingNode(VerbatimNode):
     """ A code listing environment. """
     def __init__(self, content, args):
