@@ -1,7 +1,7 @@
 import os, sys, re
 from converter import DocParser, Tokenizer, RestWriter 
 from converter import restwriter
-
+from .tabular import TabularData
 
 class envvars(list):
     """ workaround as jinja2 departs from django in dict iteration """
@@ -111,6 +111,17 @@ class INode(Matcher):
     heading = property(lambda self:self.sect or self.chap)
     tex = property(lambda self:self.sname + ".tex" )
     rst = property(lambda self:self.drv + ".rst" )
+
+
+    def _unrec_table(self):
+        td = TabularData()
+        for n in self.ancestors:
+           unrecs = n.unrecs
+           if len(unrecs) > 0: 
+               td.append_( sname=n.sname , unrecs=unrecs )
+        return str(td)
+    unrec_table = property( _unrec_table )
+
 
     def tex2rst(self, **kwa ):
         if kwa.get('verbose',None):
