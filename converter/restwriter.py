@@ -502,15 +502,16 @@ class RestWriter(object):
         self.floatnode = None
 
     def visit_MathNode(self, node):
-        """
-          loosing newlines
-        """
-        self.write_directive('math', '' , spabove=True, spbelow=False)
+        if node.label:
+            self.write('.. _%s:' % node.label)
+        self.write_directive('math', '' , spabove=False, spbelow=False)
         self.write('   :nowrap:')
         self.write('   :label: %s' % node.label )
         self.write()
-        with self.indented():
-            self.visit_node(node.content)
+        for line in node.raw.split("\n"):
+             self.write('   %s' %  line)
+        self.write()
+
 
 
     def visit_EnvironmentNode(self, node):
@@ -763,6 +764,14 @@ class RestWriter(object):
             else:
                 print "WARNING failed to match %s %s " % ( path , dim ) 
         elif cmdname == 'centering':
+            pass
+        elif cmdname == 'rowcolor':
+            pass
+        elif cmdname == 'rowcolors':
+            pass
+        elif cmdname == 'par':
+            pass
+        elif cmdname == 'endhead':
             pass
         elif cmdname == 'fixme':
             self.curpar.append("**FIXME** ")
@@ -1066,8 +1075,9 @@ class RestWriter(object):
             self.visit_wrapped('`', self.get_textonly_node(content, 'var',
                                                            warn=1), '`')
         elif cmdname == 'ref':
-            self.curpar.append(':ref:`%s%s`' % (self.labelprefix,
-                                                text(node.args[0]).lower()))
+            label = text(node.args[0]).lower()
+            role = "eq" if label.startswith('eq') else "ref"
+            self.curpar.append(':%s:`%s%s`' % (role,self.labelprefix,label ))
         elif cmdname == 'refmodule':
             self.visit_wrapped(':mod:`', node.args[1], '`', noescape=True)
         elif cmdname == 'optional':

@@ -267,7 +267,11 @@ class DocParser(object):
             'fixme': 'M',
             'centerline': 'M',
             'centering': '',
+            'par': '',
+            'endhead': '',
             'includegraphics':'OM',
+            'rowcolor':'OT',
+            'rowcolors':'MMM',
 
             # Pydoc specific commands
             'versionadded': 'OT',
@@ -693,33 +697,38 @@ class DocParser(object):
 
     # involved math markup must be corrected manually
     def handle_displaymath_env(self):
-        text = ['\\begin','{','equation','}','\\n']
-        nodelist = NodeList()
+        envname = self.envname
+        raw = "\\begin{%s}" % envname
         for l, t, v, r in self.tokens:
-            print l,t,v,r
-            #if t == 'command' and v == 'end' :
-            #     tok = self.tokens.peekmany(3)
-            #     if tok[0][1] == 'bgroup' and \
-            #        tok[1][1] == 'text' and \
-            #        tok[1][2] == 'equation' and \
-            #        tok[2][1] == 'egroup':
-            #        self.tokens.popmany(3)
-            #        break
-            text.append(r)
+            #print l,t,v,r
+            raw += r
+            if t == 'command' and v == 'end' :
+                 tok = self.tokens.popmany(3)
+                 if tok[0][1] == 'bgroup' and \
+                    tok[1][1] == 'text' and \
+                    tok[2][1] == 'egroup':
+                    endenv = tok[1][2]
+                 else:
+                    endenv = None
+                 for _ in tok[2],tok[1],tok[0]:  ## huh need reverse order ... to avoid \end}array{ 
+                    self.tokens.push(_)                   
+            
+                 if endenv == envname:
+                     tok = self.tokens.popmany(3)
+                     for _ in tok:
+                         raw += _[3]
+                     break 
 
-        txt = ''.join(text)
-
-        label_ptn = re.compile("\\label\{(\S*)\}") 
-        label_m = label_ptn.search(txt)
+        label_ptn = re.compile(r"\\label\{(\S*)\}") 
+        label_m = label_ptn.search(raw)
         if label_m:
             label = label_m.group(1)
+            #raw = label_ptn.sub("", raw)   ## remove the label from the raw ... avoid duplicate eqn labels 
         else:
             label = "dummy"
 
-
-        print txt 
-        txtl = NodeList(map(TextNode,txt.split("\\n")))
-        return MathNode(txtl, label=label)
+        txtl = NodeList(map(TextNode,raw.split("\\n")))
+        return MathNode(txtl, raw=raw, label=label)
     handle_equation_env = handle_displaymath_env
     handle_eqnarray_env = handle_displaymath_env
     handle_math_env = handle_displaymath_env
@@ -827,13 +836,13 @@ class DocParser(object):
     def handle_tabular_env(self):
         envname = self.envname
         args = self.parse_args_raw(envname )
-        print "tabular %s args %r " % (envname , args )
+        #print "tabular %s args %r " % (envname , args )
         orig_colspec = args[0]
         colpatn = re.compile("({[^}]*})")   ##  "p{1.6in}llllp{2in}" -->   'pllllp'
         colspec = colpatn.sub("",orig_colspec)
         colspec = colspec.replace('|','')
         numcols = len(colspec)
-        print "handle_tabular_env numcols %s orig_colspec %s colspec %s " % ( numcols , orig_colspec, colspec  )
+        #print "handle_tabular_env numcols %s orig_colspec %s colspec %s " % ( numcols , orig_colspec, colspec  )
  
         all = []
         running = [False]

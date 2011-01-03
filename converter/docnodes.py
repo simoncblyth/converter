@@ -303,9 +303,10 @@ class VerbatimNode(DocNode):
 
 class MathNode(DocNode):
     """ A verbatim math block : equation/eqnarray/etc... """
-    def __init__(self, content, label=None):
+    def __init__(self, content, label=None, raw=None):
         self.content = content
         self.label = label
+        self.raw = raw
 
     def __repr__(self):
         return 'MathNode(%r;%r)' % (self.content,self.label)
