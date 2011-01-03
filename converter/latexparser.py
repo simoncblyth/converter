@@ -185,6 +185,27 @@ class DocParser(object):
                 nodelist.append(TextNode(v))
         return nodelist.flatten()
 
+
+
+
+
+    def parse_args_raw(self, cmdname ):
+        """
+    \\begin{longtable}{p{1.6in}llllp{2in}}
+     "p{1.6in}llllp{2in}"
+
+        """
+        d = 0 
+        raw = ""
+        for l, t, v, r in self.tokens:
+             raw += r 
+             if t == "bgroup":d += 1
+             if t == "egroup":d -= 1
+             #print d,l,t,v,r
+             if d == 0:break     
+        assert raw[0] == "{" and raw[-1] == "}" 
+        return [raw[1:-1]]
+
     def parse_args(self, cmdname, argspec):
         """ Helper to parse arguments of a command. """
         # argspec: M = mandatory, T = mandatory, check text-only,
@@ -530,6 +551,7 @@ class DocParser(object):
 
     def handle_begin(self):
         envname, = self.parse_args('begin', 'T')
+        self.envname = envname.text
         handler = getattr(self, 'handle_%s_env' % envname.text, None)
         if not handler:
             raise ParserError('no handler for %s environment' % envname.text,
@@ -801,14 +823,17 @@ class DocParser(object):
     handle_tablev_env = mk_table_handler(None, 'v', 5)
     handle_longtablev_env = handle_tablev_env
 
-    def handle_tabular_env(self):
-        args = self.parse_args('tabular', 'T' )
 
-        colspec = args[0].text 
+    def handle_tabular_env(self):
+        envname = self.envname
+        args = self.parse_args_raw(envname )
+        print "tabular %s args %r " % (envname , args )
+        orig_colspec = args[0]
+        colpatn = re.compile("({[^}]*})")   ##  "p{1.6in}llllp{2in}" -->   'pllllp'
+        colspec = colpatn.sub("",orig_colspec)
         colspec = colspec.replace('|','')
         numcols = len(colspec)
-     
-        #print "handle_tabular_env numcols %s " % ( numcols )
+        print "handle_tabular_env numcols %s orig_colspec %s colspec %s " % ( numcols , orig_colspec, colspec  )
  
         all = []
         running = [False]
@@ -848,12 +873,13 @@ class DocParser(object):
         if len(all) > 0:
             headings = all[0]
             lines = all[1:]
-            return TabularNode(numcols, headings, lines )
+            return TabularNode(numcols, headings, lines , colspec=orig_colspec)
         else:
             assert False, "handle_tabular_env failed to parse any table rows matching the column spec %s %s CHECK TABULAR COLS MATCH THE SPEC " % ( colspec, numcols )
             print "WARNING returning EMPTY"
             return EmptyNode()        
 
+    handle_longtable_env = handle_tabular_env
 
     def handle_table_env(self): 
         args = self.parse_args('table', 'Q' )

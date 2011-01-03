@@ -278,14 +278,15 @@ class DescEnvironmentNode(EnvironmentNode):
 
 
 class TabularNode(EnvironmentNode):
-    def __init__(self, numcols, headings, lines ):
+    def __init__(self, numcols, headings, lines , colspec=None ):
         self.numcols = numcols
         self.headings = headings
         self.lines = lines
+        self.colspec = colspec
 
     def __repr__(self):
-        return 'TabularNode(%r, %r, %r )' % (self.numcols,
-                                          self.headings, self.lines )
+        return 'TabularNode(%r, %r, %r ; %r  )' % (self.numcols,
+                                          self.headings, self.lines, self.colspec )
 
     def walk(self):
         return []

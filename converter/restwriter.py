@@ -883,6 +883,7 @@ class RestWriter(object):
             for line in lines:
                 cells = []
                 for i, cell in enumerate(line):
+                    #print "cell %r " % cell
                     par = self.get_node_text(cell, wrap=True, width=colwidth)
                     if len(par) == 1 and self.note_re.match(par[0].strip()):
                         # special case: escape "(1)" to avoid enumeration
