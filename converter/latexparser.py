@@ -264,6 +264,7 @@ class DocParser(object):
             'verbatiminput': 'T',
             'input': 'T',
             'caption': 'OM',
+            'bibitem': 'OT',
             'fixme': 'M',
             'centerline': 'M',
             'centering': '',
@@ -483,6 +484,7 @@ class DocParser(object):
             'quotation': '',
             'center':'',
             'em':'',
+            'thebibliography':'T',
 
             'notice': 'Q',
             'seealso': '',

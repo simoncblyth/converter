@@ -536,6 +536,9 @@ class RestWriter(object):
             self.visit_node(node.content)
         elif envname == 'em':
             self.write_directive('note', '', node.content, spabove=True)
+        elif envname == 'thebibliography':
+            self.write_directive('rubric', 'Bibliography', spabove=True,spbelow=True)
+            self.visit_node(node.content)
         else:
             raise WriterError('no handler for %s environment' % envname)
 
@@ -773,6 +776,8 @@ class RestWriter(object):
             pass
         elif cmdname == 'endhead':
             pass
+        elif cmdname == 'bibitem':
+            self.curpar.append(".. [%s]" % text(node.args[1])) 
         elif cmdname == 'fixme':
             self.curpar.append("**FIXME** ")
             self.visit_node(node.args[0])
@@ -847,7 +852,12 @@ class RestWriter(object):
                    pass
                    #print "lla %r nomatch " % lla
             #print "llargs %r \n   --> %r " % ( targ , lld )
-            lang = lld.get('lang', 'guess') 
+            lang = lld.get('language', 'guess') 
+            #   site-packages/pygments/lexers/_mapping.py  vs http://en.wikibooks.org/wiki/LaTeX/Packages/Listings
+            langmap = {'C++':'cpp', 'shell':'sh', 'Python':'python', 'C':'c' }
+            if lang in langmap:
+                lang = langmap[lang]
+
             self.write_directive('code-block', lang , EmptyNode() , spabove=False ) 
         else:
             if self.curpar:
