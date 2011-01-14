@@ -45,6 +45,7 @@ class Matcher(list):
         elif os.path.exists(name+'.tex'): 
            return name+'.tex'
         else:
+           print "warning failed to resolve %s " % name 
            return None 
 
 class INode(Matcher):

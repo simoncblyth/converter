@@ -113,6 +113,11 @@ class TextNode(DocNode):
         else:
             return '%s(%r)' % (self.__class__.__name__, self.text)
 
+class TOCNode(TextNode):
+    """ An contents node. """
+    def __init__(self, title):
+        self.title = title
+
 
 class EmptyNode(TextNode):
     """ An empty node. """

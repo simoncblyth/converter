@@ -512,7 +512,9 @@ class RestWriter(object):
              self.write('   %s' %  line)
         self.write()
 
-
+    def visit_TOCNode(self, node):
+        self.flush_par()
+        self.write_directive('contents', text(node.title) , spabove=True, spbelow=True)
 
     def visit_EnvironmentNode(self, node):
         self.flush_par()

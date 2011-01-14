@@ -14,7 +14,7 @@ from .docnodes import CommentNode, RootNode, NodeList, ParaSepNode, \
      DescLineCommandNode, InlineNode, IndexNode, SectioningNode, \
      EnvironmentNode, DescEnvironmentNode, TableNode, TabularNode, VerbatimNode, \
      ListNode, ItemizeNode, EnumerateNode, DescriptionNode, \
-     DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode, ListingNode, FigureNode, MathNode
+     DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode, ListingNode, FigureNode, MathNode, TOCNode
 
 from .util import umlaut, empty
 import sys, re
@@ -550,6 +550,8 @@ class DocParser(object):
         raise ParserError('no handler for \\%s command' % cmdname,
                           self.tokens.peek()[0])
 
+
+
     def handle_lstset(self):
         args = self.parse_args('\\lstset', 'M')   # need to parse the args to prevent them being spilled
         #print "handle_lstset %r " % args 
@@ -587,6 +589,11 @@ class DocParser(object):
     def handle_note(self):
         note = self.parse_args('\\note', 'M')[0]
         return EnvironmentNode('notice', [TextNode('note')], note)
+
+    def handle_rstcontents(self):
+        title = self.parse_args('\\rstcontents', 'M')[0]
+        return TOCNode(title)
+
 
     def handle_warning(self):
         warning = self.parse_args('\\warning', 'M')[0]
