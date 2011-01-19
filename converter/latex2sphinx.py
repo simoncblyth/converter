@@ -120,7 +120,7 @@ class INode(Matcher):
            unrecs = n.unrecs
            if len(unrecs) > 0: 
                td.append_( sname=n.sname , unrecs=unrecs )
-        return str(td)
+        return str(td) if len(td) else None
     unrec_table = property( _unrec_table )
 
 
@@ -162,7 +162,7 @@ class INode(Matcher):
         return template.render( ctx )
 
     def __repr__(self):
-        return "%s<INode [%d,%d] %s (%s;%s) \"%s\"  >" % ( "   " * self.depth, len(self), self.depth , self.name , self.fold, self.basename , self.heading ) 
+        return "%s INode [%d,%d] %s (%s;%s) \"%s\"  " % ( "   " * self.depth, len(self), self.depth , self.name , self.fold, self.basename , self.heading ) 
 
     def title( self, t ):
         if not t:return ""
@@ -187,10 +187,22 @@ class INode(Matcher):
     ancestors = property(_ancestors)
 
 
+mtime = lambda path:os.path.getmtime(path) if os.path.exists( path) else 0
 
 def convert_doc( tex , rst=None, **kwa ):
+    """
+    Convert a :file:`.tex` to  :file:`.rst`   
+    """
     if not rst:
         rst = tex[:-4]+'.rst'
+
+    force = kwa.pop('force', False)
+    
+    if mtime(rst) > mtime(tex) and not force:
+        #print "rst file is uptodate wrt the tex, skip convert ... override with force"   
+        return []
+    #print "proceed with conversion mtime rst %s tex %s " % ( mtime(rst), mtime(tex) )
+
     tex = open(tex,"r")
     rst = open(rst,"w")
     kwa.pop('recurse')
@@ -199,16 +211,20 @@ def convert_doc( tex , rst=None, **kwa ):
     rst.close()
     return unrec
 
-def convert_doctree( base , dry_run=False, extlinks={} , verbose=False, envvars=[] ):
+def convert_doctree( base , dry_run=False, extlinks={} , verbose=False, envvars=[], force=False ):
+    """
+    Although could recurse from the root, it is simpler to understand errors by 
+    manual looping over primaries and recursing from there. 
+    """
     root = INode(base)
     print "convert_doctree from %r " % root
     print "primaries... "
     predicate = lambda _:1
     #predicate = lambda _:_.is_index
     for pri in filter(predicate,root):
-        pri.tex2rst(recurse=True,dry_run=dry_run,extlinks=extlinks,verbose=verbose) 
+        pri.tex2rst(recurse=True,dry_run=dry_run,extlinks=extlinks,verbose=verbose, force=force) 
     print "root... "  ## last to facilitate error reporting
-    root.tex2rst(recurse=False,verbose=verbose,envvars=envvars)
+    root.tex2rst(recurse=False,verbose=verbose,envvars=envvars, force=force)
 
  
 from nose.tools import make_decorator
