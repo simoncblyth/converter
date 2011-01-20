@@ -534,6 +534,8 @@ class RestWriter(object):
             self.write_directive('epigraph', '', node.content, spabove=True)
         elif envname == 'lstlisting':
             self.visit_VerbatimNode(node)
+        elif envname == 'rstverbatim':
+            self.visit_RstVerbatimNode(node)
         elif envname == 'center':
             self.visit_node(node.content)
         elif envname == 'em':
@@ -887,6 +889,23 @@ class RestWriter(object):
                 del lines[0]
             for line in lines:
                 self.write(line)
+
+    def visit_RstVerbatimNode(self, node):
+        if isinstance(node.content, TextNode):
+            # verbatim
+            lines = textwrap.dedent(text(node.content).lstrip('\n')).split('\n')
+            if not lines:
+                return
+        else:
+            # alltt, possibly with inline formats
+            lines = self.get_node_text(self.get_textonly_node(
+                    node.content, warn=0)).split('\n') + ['']
+        # discard leading blank links
+        while not lines[0].strip():
+            del lines[0]
+        for line in lines:
+            self.write(line)
+
 
     note_re = re.compile('^\(\d\)$')
     

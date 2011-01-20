@@ -12,7 +12,7 @@
 from .docnodes import CommentNode, RootNode, NodeList, ParaSepNode, \
      TextNode, EmptyNode, NbspNode, SimpleCmdNode, BreakNode, CommandNode, \
      DescLineCommandNode, InlineNode, IndexNode, SectioningNode, \
-     EnvironmentNode, DescEnvironmentNode, TableNode, TabularNode, VerbatimNode, \
+     EnvironmentNode, DescEnvironmentNode, TableNode, TabularNode, VerbatimNode, RstVerbatimNode, \
      ListNode, ItemizeNode, EnumerateNode, DescriptionNode, \
      DefinitionsNode, ProductionListNode, AmpersandNode, ExtLinkNode, ListingNode, FigureNode, MathNode, TOCNode
 
@@ -682,6 +682,21 @@ class DocParser(object):
             text.append(r)
         #print "handle_verbatim_env %s " % repr(text)
         return VerbatimNode(TextNode(''.join(text)))
+
+    def handle_rstverbatim_env(self):
+        text = []
+        for l, t, v, r in self.tokens:
+            if t == 'command' and v == 'end' :
+                tok = self.tokens.peekmany(3)
+                if tok[0][1] == 'bgroup' and \
+                   tok[1][1] == 'text' and \
+                   tok[1][2] == 'rstverbatim' and \
+                   tok[2][1] == 'egroup':
+                    self.tokens.popmany(3)
+                    break
+            text.append(r)
+        #print "handle_verbatim_env %s " % repr(text)
+        return RstVerbatimNode(TextNode(''.join(text)))
    
     def handle_lstlisting_env(self):
         text = []

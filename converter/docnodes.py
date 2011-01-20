@@ -305,6 +305,14 @@ class VerbatimNode(DocNode):
     def __repr__(self):
         return 'VerbatimNode(%r)' % self.content
 
+class RstVerbatimNode(DocNode):
+    """ rst inclusion  """
+    def __init__(self, content):
+        self.content = content
+
+    def __repr__(self):
+        return 'RstVerbatimNode(%r)' % self.content
+
 
 class MathNode(DocNode):
     """ A verbatim math block : equation/eqnarray/etc... """
