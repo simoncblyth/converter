@@ -8,8 +8,8 @@ class TabularData(list):
        A simple way to create a reStructuredText table string 
        from a list of dicts 
    """
-   def __init__(self):
-       super(self.__class__,self).__init__() 
+   def __init__(self, *args):
+       super(self.__class__,self).__init__(*args) 
 
    def append_(self, **kwa):
        self.append(kwa)
@@ -51,12 +51,13 @@ class TabularData(list):
 
 
 if __name__ == '__main__':
-
+   pass
+   # relative imports do not work locally ...
    td = TabularData()
    td.append( {"color":"red",   "number":1 }) 
    td.append( {"color":"green", "number":2 }) 
    td.append( {"color":"blue",  "number":3 }) 
-   td.append(color="cyan",number=4 ) 
+   td.append( {"color":"cyan",  "number":4 }) 
    print td
    print repr(td)
 
