@@ -76,7 +76,7 @@ class MyCnf(dict):
 class MyDB(object):
     def __init__(self, sect ):
         cnf = MyCnf(str(sect))
-        print cnf
+        #print cnf
         con = MySQLdb.connect( host=cnf['host'], db=cnf['database'], user=cnf['user'], passwd=cnf['password'], cursorclass=MySQLdb.cursors.DictCursor )
         cur = con.cursor() 
         self.con = con
