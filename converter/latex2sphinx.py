@@ -1,4 +1,6 @@
-import os, sys, re
+import os, sys, re, logging
+log = logging.getLogger(__name__)
+
 from converter import DocParser, Tokenizer, RestWriter 
 from converter import restwriter
 from .tabular import TabularData
@@ -11,18 +13,26 @@ class envvars(list):
                 self.append(dict(key=k,val=v)) 
    
 def _convert_file(inf, outf, doraise=True, splitchap=False,
-                 toctree=None, deflang=None, labelprefix='', fakechapter=None, fakesection=None, extlinks={}, verbose=False, dry_run=False ):
+                 toctree=None, deflang=None, labelprefix='', fakechapter=None, fakesection=None, extlinks={}, verbose=False, dry_run=False , incname=None ):
     """
          *fakechapter* and *fakesection* preprend the chapter or section definition to 
          the content read from the source latex file, allowing the converted reST to 
          incorporate the chapter/section title without needing to change the latex source 
  
     """
+
+    log.debug("_convert_file incname %s " % incname )
+
+    if incname:
+        pfx = "\label{%s}\n" % incname.lower().replace("/","-")
+    else:
+        pfx = ""
+
     content = inf.read()
     if fakechapter:
-        content = "\chapter{%s}\n" % fakechapter + content 
+        content = "%s\chapter{%s}\n" % ( pfx, fakechapter ) + content 
     if fakesection:
-        content = "\section{%s}\n" % fakesection + content 
+        content = "%s\section{%s}\n" % ( pfx, fakesection ) + content 
 
     p = DocParser(Tokenizer(content).tokenize(), inf, extlinks=extlinks)
     r = RestWriter(outf, splitchap, toctree, deflang, labelprefix)
@@ -195,6 +205,7 @@ def convert_doc( tex , rst=None, **kwa ):
     """
     if not rst:
         rst = tex[:-4]+'.rst'
+    kwa.update(incname=tex[:-4])
 
     force = kwa.pop('force', False)
     
